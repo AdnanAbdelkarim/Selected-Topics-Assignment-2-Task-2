@@ -8,11 +8,11 @@ from mistralai import Mistral, UserMessage
 import time
 from mistralai.models.sdkerror import SDKError
 
-# Set your API key
+# Set your API key (for production, set this in Streamlit Secrets)
 os.environ["MISTRAL_API_KEY"] = "NXyKdE5JFehmTjXn1RtYyVBOlMzPLGyB"
 api_key = os.getenv("MISTRAL_API_KEY")
 
-# Debug: Print API key to verify it's set (remove before production)
+# Debug: Print API key to verify it's set (remove or comment this line before deployment)
 print("MISTRAL_API_KEY:", api_key)
 
 # Define the UDST policies (replace URLs with actual ones)
@@ -47,6 +47,7 @@ def chunk_text(text, chunk_size=512):
     return [text[i : i + chunk_size] for i in range(0, len(text), chunk_size)]
 
 def get_text_embedding(list_txt_chunks, retries=3, delay=2):
+    """Return embeddings for a list of text chunks with retry on rate limits."""
     client = Mistral(api_key=api_key)
     for attempt in range(retries):
         try:
@@ -104,8 +105,8 @@ def generate_answer(prompt, retries=3, delay=2):
 
 st.title("UDST Policies Chatbot")
 
-# Policy selection
-selected_policy = st.selectbox("Select a Policy", list(policies.keys()))
+# Display the policies as a list using radio buttons
+selected_policy = st.radio("Select a Policy", list(policies.keys()))
 
 # Input for the user's query
 user_query = st.text_input("Enter your question about the policy:")
