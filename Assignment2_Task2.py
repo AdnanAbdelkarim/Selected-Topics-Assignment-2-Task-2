@@ -12,6 +12,9 @@ from mistralai.models.sdkerror import SDKError
 os.environ["MISTRAL_API_KEY"] = "NXyKdE5JFehmTjXn1RtYyVBOlMzPLGyB"
 api_key = os.getenv("MISTRAL_API_KEY")
 
+# Debug: Print API key to verify it's set (remove before production)
+print("MISTRAL_API_KEY:", api_key)
+
 # Define the UDST policies (replace URLs with actual ones)
 policies = {
     "ACADEMIC ANNUAL LEAVE POLICY": "https://www.udst.edu.qa/about-udst/institutional-excellence-ie/policies-and-procedures/academic-annual-leave-policy",
@@ -78,15 +81,24 @@ def retrieve_chunks(question_embeddings, index, chunks, k=2):
     retrieved_chunks = [chunks[i] for i in I.tolist()[0]]
     return retrieved_chunks
 
-def generate_answer(prompt):
-    """Call the Mistral chat API to generate an answer from the prompt."""
+def generate_answer(prompt, retries=3, delay=2):
+    """Call the Mistral chat API to generate an answer from the prompt with retries on rate limits."""
     client = Mistral(api_key=api_key)
     messages = [UserMessage(content=prompt)]
-    chat_response = client.chat.complete(
-        model="mistral-large-latest",
-        messages=messages,
-    )
-    return chat_response.choices[0].message.content
+    for attempt in range(retries):
+        try:
+            chat_response = client.chat.complete(
+                model="mistral-large-latest",
+                messages=messages,
+            )
+            return chat_response.choices[0].message.content
+        except SDKError as e:
+            if "429" in str(e):
+                time.sleep(delay)
+                delay *= 2  # Exponential backoff
+            else:
+                raise e
+    raise Exception("Exceeded maximum retries for chat API call.")
 
 # --- Streamlit Interface ---
 
